@@ -155,6 +155,49 @@ public class SaneScanDriverTests : ContextualTests
     }
 
     [Fact]
+    public void ScanPage_16BitDepth()
+    {
+        var deviceMock = Substitute.For<ISaneDevice>();
+        var eventsMock = Substitute.For<IScanEvents>();
+        deviceMock.GetParameters().Returns(new SaneReadParameters
+        {
+            Depth = 16,
+            Frame = SaneFrameType.Rgb,
+            Lines = 2,
+            BytesPerLine = 12,
+            PixelsPerLine = 2
+        });
+        deviceMock.Read(Arg.Any<byte[]>(), out Arg.Any<int>())
+            .Returns(x =>
+                {
+                    var buffer = (byte[]) x[0];
+                    for (int i = 0; i < 12; i++)
+                    {
+                        // Native byte order 16-bit samples with a distinct most significant byte
+                        BitConverter.TryWriteBytes(buffer.AsSpan(i * 2), (ushort) ((i * 10) << 8 | 0xFF));
+                    }
+                    x[1] = 24;
+                    return true;
+                },
+                x =>
+                {
+                    x[1] = 0;
+                    return false;
+                });
+
+        var result = _driver.ScanPage(deviceMock, eventsMock, new SaneScanDriver.OptionData());
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Width);
+        Assert.Equal(2, result.Height);
+        ImageAsserts.PixelColors(result, new()
+        {
+            { (0, 0), (0, 10, 20) },
+            { (1, 1), (90, 100, 110) }
+        });
+    }
+
+    [Fact]
     public void ScanPage_NoRead_ReturnsNull()
     {
         var deviceMock = Substitute.For<ISaneDevice>();

@@ -615,10 +615,30 @@ internal class SaneScanDriver : IScanDriver
         {
             return null;
         }
+        if (p.Depth == 16)
+        {
+            // Some scanners (e.g. film scanners) only support 16 bits per sample, so we reduce it to 8
+            dataStream = ConvertSamples16To8(dataStream);
+            p.Depth = 8;
+            p.BytesPerLine /= 2;
+        }
         // Now that we've read the data we know the exact frame size and can work backwards to get the number of lines.
         p.Lines = (int) dataStream.Length / p.BytesPerLine;
 
         return dataStream;
+    }
+
+    private static MemoryStream ConvertSamples16To8(MemoryStream dataStream)
+    {
+        // SANE transmits 16-bit samples in native byte order, so we keep the most significant byte of each
+        var input = dataStream.GetBuffer();
+        var output = new byte[dataStream.Length / 2];
+        int msbOffset = BitConverter.IsLittleEndian ? 1 : 0;
+        for (int i = 0; i < output.Length; i++)
+        {
+            output[i] = input[i * 2 + msbOffset];
+        }
+        return new MemoryStream(output, 0, output.Length, false, true);
     }
 
     internal class OptionData
