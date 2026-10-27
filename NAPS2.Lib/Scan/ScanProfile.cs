@@ -228,6 +228,7 @@ public enum ScanDpi
     Dpi800,
     Dpi1200,
     Dpi2400,
+    Dpi3600,
     Dpi4800
 }
 
@@ -382,6 +383,8 @@ public static class ScanEnumExtensions
                 return 1200;
             case ScanDpi.Dpi2400:
                 return 2400;
+            case ScanDpi.Dpi3600:
+                return 3600;
             case ScanDpi.Dpi4800:
                 return 4800;
             default:
